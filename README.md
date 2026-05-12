@@ -1,1 +1,0 @@
-# code23-toplululuk-ve-gonderi-platformu
