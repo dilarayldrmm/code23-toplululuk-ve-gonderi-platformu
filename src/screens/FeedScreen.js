@@ -5,15 +5,28 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
+
 import { usePosts } from '../context/PostContext';
+import { useNotifications } from '../context/NotificationContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function FeedScreen({ navigation }) {
-  const { posts, loadMore, isLoading, hasMore } = usePosts();
+  const {
+    posts,
+    loadMore,
+    hasMore,
+    isLoading,
+    toggleLike,
+    isLiked,
+    toggleBookmark,
+    isBookmarked,
+  } = usePosts();
+
+  const { unreadCount } = useNotifications();
+  const { colors } = useTheme();
 
   useEffect(() => {
     if (posts.length === 0) {
@@ -21,305 +34,194 @@ export default function FeedScreen({ navigation }) {
     }
   }, []);
 
-  const renderPost = ({ item }) => {
-    return (
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.8}
-        onPress={() =>
-          navigation.navigate('PostDetail', { post: item })
-        }
-      >
-        <View style={styles.cardHeader}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {item.userId}
-            </Text>
-          </View>
+  const handleLike = post => {
+    toggleLike(post.id);
+  };
 
-          <View>
-            <Text style={styles.author}>
-              Kullanıcı #{item.userId}
-            </Text>
-            <Text style={styles.time}>Topluluk gönderisi</Text>
-          </View>
+  const handleBookmark = post => {
+    toggleBookmark(post);
+  };
+  const renderPost = ({ item }) => (
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: colors.card }]}
+      onPress={() => navigation.navigate('PostDetail', { post: item })}
+    >
+      <View style={styles.userRow}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{item.userId}</Text>
         </View>
 
-        <Text style={styles.title}>{item.title}</Text>
-
-        <Text style={styles.body} numberOfLines={2}>
-          {item.body}
-        </Text>
-
-        <View style={styles.tags}>
-          {item.tags?.slice(0, 3).map((tag, index) => (
-            <View key={index} style={styles.tag}>
-              <Text style={styles.tagText}>#{tag}</Text>
-            </View>
-          ))}
+        <View>
+          <Text style={[styles.username, { color: colors.text }]}>
+            Kullanıcı #{item.userId}
+          </Text>
+          <Text style={[styles.subText, { color: colors.softText }]}>
+            Topluluk gönderisi
+          </Text>
         </View>
+      </View>
 
-        <View style={styles.footer}>
-          <View style={styles.stat}>
-            <Ionicons
-              name="heart-outline"
-              size={20}
-              color="#16a34a"
-            />
-            <Text style={styles.statText}>
-              {item.reactions?.likes || 0}
-            </Text>
+      <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
+
+      <Text numberOfLines={2} style={[styles.body, { color: colors.softText }]}>
+        {item.body}
+      </Text>
+
+      <View style={styles.tags}>
+        {item.tags?.slice(0, 3).map((tag, index) => (
+          <View key={`${tag}-${index}`} style={styles.tag}>
+            <Text style={styles.tagText}>#{tag}</Text>
           </View>
+        ))}
+      </View>
 
-          <View style={styles.stat}>
-            <Ionicons
-              name="chatbubble-outline"
-              size={19}
-              color="#6b7280"
-            />
-            <Text style={styles.statText}>
-              {item.reactions?.dislikes || 0}
-            </Text>
-          </View>
-
-          <View style={styles.stat}>
-            <Ionicons
-              name="eye-outline"
-              size={20}
-              color="#6b7280"
-            />
-            <Text style={styles.statText}>
-              {item.views || 0}
-            </Text>
-          </View>
-
+      <View style={styles.actions}>
+        <TouchableOpacity style={styles.action} onPress={() => handleLike(item)}>
           <Ionicons
-            name="bookmark-outline"
-            size={22}
+            name={isLiked(item.id) ? 'heart' : 'heart-outline'}
+            size={26}
             color="#16a34a"
           />
+          <Text style={[styles.actionText, { color: colors.softText }]}>
+            {item.reactions?.likes || 0}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.action}>
+          <Ionicons name="chatbubble-outline" size={24} color={colors.softText} />
+          <Text style={[styles.actionText, { color: colors.softText }]}>
+            {item.reactions?.dislikes || 0}
+          </Text>
         </View>
-      </TouchableOpacity>
-    );
-  };
 
-  const renderFooter = () => {
-    if (!isLoading) return null;
+        <View style={styles.action}>
+          <Ionicons name="eye-outline" size={25} color={colors.softText} />
+          <Text style={[styles.actionText, { color: colors.softText }]}>
+            {item.views || 0}
+          </Text>
+        </View>
 
-    return (
-      <View style={styles.loadingFooter}>
-        <ActivityIndicator color="#16a34a" />
-        <Text style={styles.loadingText}>
-          Gönderiler yükleniyor...
-        </Text>
+        <TouchableOpacity onPress={() => handleBookmark(item)}>
+          <Ionicons
+            name={isBookmarked(item.id) ? 'bookmark' : 'bookmark-outline'}
+            size={30}
+            color="#16a34a"
+          />
+        </TouchableOpacity>
       </View>
-    );
-  };
+    </TouchableOpacity>
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.headerRow}>
         <View>
-          <Text style={styles.greeting}>Merhaba 👋</Text>
-          <Text style={styles.headerTitle}>CODE23 Akış</Text>
+          <Text style={[styles.hello, { color: colors.softText }]}>Merhaba 👋</Text>
+          <Text style={[styles.header, { color: colors.text }]}>CODE23 Akış</Text>
         </View>
 
-        <View style={styles.notificationBox}>
-          <Ionicons
-            name="notifications-outline"
-            size={24}
-            color="#16a34a"
-          />
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>0</Text>
-          </View>
-        </View>
+        <TouchableOpacity
+          style={[styles.notificationButton, { backgroundColor: colors.card }]}
+          onPress={() => navigation.navigate('Notifications')}
+        >
+          <Ionicons name="notifications-outline" size={30} color="#16a34a" />
+
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       <FlatList
         data={posts}
-        keyExtractor={(item, index) =>
-          `${item.id}-${index}`
-        }
+        keyExtractor={(item, index) => `${item.id}-${index}`}
         renderItem={renderPost}
-        contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         onEndReached={() => {
-          if (hasMore) loadMore();
+          if (hasMore && !isLoading) {
+            loadMore();
+          }
         }}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={renderFooter}
+        contentContainerStyle={styles.listContent}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f7f7',
-  },
-
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 14,
+  container: { flex: 1, paddingHorizontal: 18, paddingTop: 18 },
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 18,
   },
-
-  greeting: {
-    fontSize: 15,
-    color: '#6b7280',
-  },
-
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginTop: 2,
-  },
-
-  notificationBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 18,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
+  hello: { fontSize: 16, fontWeight: 'bold' },
+  header: { fontSize: 34, fontWeight: 'bold' },
+  notificationButton: {
+    width: 62,
+    height: 62,
+    borderRadius: 20,
     alignItems: 'center',
-    position: 'relative',
+    justifyContent: 'center',
     elevation: 4,
   },
-
   badge: {
     position: 'absolute',
-    top: 7,
-    right: 7,
-    minWidth: 17,
-    height: 17,
-    borderRadius: 9,
+    top: 4,
+    right: 5,
     backgroundColor: '#dc2626',
+    width: 25,
+    height: 25,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
   },
-
-  badgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-
-  list: {
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-  },
-
+  badgeText: { color: '#fff', fontWeight: 'bold' },
+  listContent: { paddingBottom: 90 },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 18,
+    padding: 20,
+    borderRadius: 28,
     marginBottom: 18,
     elevation: 4,
   },
-
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-
+  userRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
   avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     backgroundColor: '#dcfce7',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    justifyContent: 'center',
+    marginRight: 15,
   },
-
-  avatarText: {
-    color: '#16a34a',
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
-
-  author: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-
-  time: {
-    fontSize: 13,
-    color: '#9ca3af',
-    marginTop: 2,
-  },
-
-  title: {
-    fontSize: 19,
-    fontWeight: 'bold',
-    color: '#111827',
+  avatarText: { color: '#16a34a', fontSize: 20, fontWeight: 'bold' },
+  username: { fontSize: 18, fontWeight: 'bold' },
+  subText: { fontSize: 15, marginTop: 3 },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 12 },
+  body: { fontSize: 17, lineHeight: 26 },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 18 },
+  tag: {
+    backgroundColor: '#ecfdf5',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    marginRight: 8,
     marginBottom: 8,
   },
-
-  body: {
-    fontSize: 15,
-    color: '#4b5563',
-    lineHeight: 22,
-  },
-
-  tags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 14,
-    gap: 8,
-  },
-
-  tag: {
-    backgroundColor: '#f0fdf4',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-  },
-
-  tagText: {
-    color: '#16a34a',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-
-  footer: {
+  tagText: { color: '#16a34a', fontWeight: 'bold' },
+  actions: {
     borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-    marginTop: 16,
+    borderTopColor: '#e5e7eb',
+    marginTop: 18,
     paddingTop: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-
-  stat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  statText: {
-    marginLeft: 5,
-    fontSize: 14,
-    color: '#6b7280',
-    fontWeight: '600',
-  },
-
-  loadingFooter: {
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-
-  loadingText: {
-    marginTop: 8,
-    color: '#6b7280',
-  },
+  action: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  actionText: { fontSize: 16, fontWeight: 'bold' },
 });

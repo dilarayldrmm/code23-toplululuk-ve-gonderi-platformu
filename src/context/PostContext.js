@@ -5,12 +5,15 @@ const PostContext = createContext();
 
 export function PostProvider({ children }) {
   const [posts, setPosts] = useState([]);
+  const [userPosts, setUserPosts] = useState([]);
+
   const [skip, setSkip] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
   const [bookmarks, setBookmarks] = useState([]);
   const [commentCache, setCommentCache] = useState({});
+  const [likedPostIds, setLikedPostIds] = useState([]);
 
   const loadMore = async () => {
     if (isLoading || !hasMore) return;
@@ -23,7 +26,16 @@ export function PostProvider({ children }) {
       if (!data.posts || data.posts.length === 0) {
         setHasMore(false);
       } else {
-        setPosts(prev => [...prev, ...data.posts]);
+        setPosts(prev => {
+          const existingIds = prev.map(item => item.id);
+
+          const newPosts = data.posts.filter(
+            item => !existingIds.includes(item.id)
+          );
+
+          return [...prev, ...newPosts];
+        });
+
         setSkip(prev => prev + 10);
       }
     } catch (error) {
@@ -31,6 +43,99 @@ export function PostProvider({ children }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const addPostOptimistic = async post => {
+    const tempPost = {
+      id: Date.now(),
+      title: post.title,
+      body: post.body,
+      tags: post.tags || [],
+      userId: post.userId || 1,
+      reactions: {
+        likes: 0,
+        dislikes: 0,
+      },
+      views: 0,
+      isOptimistic: true,
+    };
+
+    setPosts(prev => [tempPost, ...prev]);
+    setUserPosts(prev => [tempPost, ...prev]);
+
+    try {
+      const response = await fetch('https://dummyjson.com/posts/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: post.title,
+          body: post.body,
+          userId: post.userId || 1,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Gönderi paylaşılırken hata oluştu');
+      }
+
+      const finalPost = {
+        ...tempPost,
+        apiId: data.id,
+        isOptimistic: false,
+      };
+
+      setPosts(prev =>
+        prev.map(item => (item.id === tempPost.id ? finalPost : item))
+      );
+
+      setUserPosts(prev =>
+        prev.map(item => (item.id === tempPost.id ? finalPost : item))
+      );
+
+      return { success: true, data: finalPost };
+    } catch (error) {
+      setPosts(prev => prev.filter(item => item.id !== tempPost.id));
+      setUserPosts(prev => prev.filter(item => item.id !== tempPost.id));
+
+      return {
+        success: false,
+        message: error.message || 'Gönderi paylaşılırken hata oluştu',
+      };
+    }
+  };
+
+  const toggleLike = postId => {
+    const alreadyLiked = likedPostIds.includes(postId);
+
+    setLikedPostIds(prev =>
+      alreadyLiked ? prev.filter(id => id !== postId) : [...prev, postId]
+    );
+
+    const updateLikes = post => {
+      if (post.id !== postId) return post;
+
+      const oldLikes = post.reactions?.likes || 0;
+
+      return {
+        ...post,
+        reactions: {
+          ...(post.reactions || {}),
+          likes: alreadyLiked ? Math.max(oldLikes - 1, 0) : oldLikes + 1,
+        },
+      };
+    };
+
+    setPosts(prev => prev.map(updateLikes));
+    setUserPosts(prev => prev.map(updateLikes));
+    setBookmarks(prev => prev.map(updateLikes));
+  };
+
+  const isLiked = postId => {
+    return likedPostIds.includes(postId);
   };
 
   const toggleBookmark = post => {
@@ -91,7 +196,9 @@ export function PostProvider({ children }) {
     try {
       const response = await fetch('https://dummyjson.com/comments/add', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           body: text,
           postId,
@@ -133,13 +240,31 @@ export function PostProvider({ children }) {
     }
   };
 
+  const resetPosts = () => {
+    setPosts([]);
+    setUserPosts([]);
+    setSkip(0);
+    setHasMore(true);
+    setIsLoading(false);
+    setBookmarks([]);
+    setCommentCache({});
+    setLikedPostIds([]);
+  };
+
   return (
     <PostContext.Provider
       value={{
         posts,
+        userPosts,
         loadMore,
         hasMore,
         isLoading,
+
+        addPostOptimistic,
+
+        likedPostIds,
+        toggleLike,
+        isLiked,
 
         bookmarks,
         toggleBookmark,
@@ -148,6 +273,8 @@ export function PostProvider({ children }) {
         commentCache,
         loadComments,
         addComment,
+
+        resetPosts,
       }}
     >
       {children}
@@ -157,4 +284,4 @@ export function PostProvider({ children }) {
 
 export function usePosts() {
   return useContext(PostContext);
-}
+}  
