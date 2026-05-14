@@ -2,12 +2,19 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+import { View } from 'react-native';
+
+import { useAuth } from '../context/AuthContext';
 
 import LoginScreen from '../screens/LoginScreen';
 import FeedScreen from '../screens/FeedScreen';
 import PostDetailScreen from '../screens/PostDetailScreen';
-import { Ionicons } from '@expo/vector-icons';
-import { View, Text } from 'react-native';
+import ExploreScreen from '../screens/ExploreScreen';
+import CreatePostScreen from '../screens/CreatePostScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 const RootStack = createNativeStackNavigator();
 const FeedStack = createNativeStackNavigator();
@@ -15,18 +22,11 @@ const Tab = createBottomTabNavigator();
 
 function FeedStackNavigator() {
   return (
-    <FeedStack.Navigator>
+    <FeedStack.Navigator screenOptions={{ headerShown: false }}>
       <FeedStack.Screen name="Feed" component={FeedScreen} />
       <FeedStack.Screen name="PostDetail" component={PostDetailScreen} />
+      <FeedStack.Screen name="Notifications" component={NotificationsScreen} />
     </FeedStack.Navigator>
-  );
-}
-
-function PlaceholderScreen() {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Bu ekran arkadaşının kısmı</Text>
-    </View>
   );
 }
 
@@ -35,99 +35,59 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarShowLabel: true,
+        tabBarShowLabel: false,
         tabBarActiveTintColor: '#16a34a',
-        tabBarInactiveTintColor: '#6b7280',
+        tabBarInactiveTintColor: '#111827',
         tabBarStyle: {
-          height: 76,
-          paddingTop: 8,
-          paddingBottom: 10,
-          backgroundColor: '#ffffff',
+          height: 60,
+          backgroundColor: '#fff',
           borderTopWidth: 0,
-          elevation: 12,
-          shadowColor: '#000',
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: -4 },
+          elevation: 8,
         },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
-        tabBarIcon: ({ color, size, focused }) => {
-          let iconName;
+        tabBarIcon: ({ color, focused }) => {
+          let iconName = 'home-outline';
 
-          if (route.name === 'FeedTab') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'ExploreTab') {
-            iconName = focused ? 'search' : 'search-outline';
-          } else if (route.name === 'CreatePostTab') {
-            iconName = 'add';
-          } else if (route.name === 'SavedTab') {
-            iconName = focused ? 'bookmark' : 'bookmark-outline';
-          } else if (route.name === 'ProfileTab') {
-            iconName = focused ? 'person' : 'person-outline';
-          }
+          if (route.name === 'FeedTab') iconName = focused ? 'home' : 'home-outline';
+          if (route.name === 'ExploreTab') iconName = focused ? 'search' : 'search-outline';
+          if (route.name === 'SettingsTab') iconName = focused ? 'settings' : 'settings-outline';
+          if (route.name === 'ProfileTab') iconName = focused ? 'person' : 'person-outline';
 
           if (route.name === 'CreatePostTab') {
             return (
               <View style={styles.createButton}>
-                <Ionicons name="add" size={34} color="#fff" />
+                <Ionicons name="add" size={30} color="#000" />
               </View>
             );
           }
 
-          return <Ionicons name={iconName} size={24} color={color} />;
+          return <Ionicons name={iconName} size={25} color={color} />;
         },
       })}
     >
-      <Tab.Screen
-        name="FeedTab"
-        component={FeedStackNavigator}
-        options={{ title: 'Akış' }}
-      />
-
-      <Tab.Screen
-        name="ExploreTab"
-        component={PlaceholderScreen}
-        options={{ title: 'Keşfet' }}
-      />
-
-      <Tab.Screen
-        name="CreatePostTab"
-        component={PlaceholderScreen}
-        options={{ title: 'Gönderi' }}
-      />
-
-      <Tab.Screen
-        name="SavedTab"
-        component={PlaceholderScreen}
-        options={{ title: 'Kaydedilenler' }}
-      />
-
-      <Tab.Screen
-        name="ProfileTab"
-        component={PlaceholderScreen}
-        options={{ title: 'Profil' }}
-      />
+      <Tab.Screen name="FeedTab" component={FeedStackNavigator} />
+      <Tab.Screen name="ExploreTab" component={ExploreScreen} />
+      <Tab.Screen name="CreatePostTab" component={CreatePostScreen} />
+      <Tab.Screen name="SettingsTab" component={SettingsScreen} />
+      <Tab.Screen name="ProfileTab" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
 
 export default function AppNavigator() {
+  const { token } = useAuth();
+
   return (
     <NavigationContainer>
-      <RootStack.Navigator initialRouteName="Login">
-        <RootStack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="MainTabs"
-          component={MainTabs}
-          options={{ headerShown: false }}
-        />
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        {token ? (
+          <>
+            <RootStack.Screen name="MainTabs" component={MainTabs} />
+            <RootStack.Screen name="PostDetail" component={PostDetailScreen} />
+            <RootStack.Screen name="Notifications" component={NotificationsScreen} />
+          </>
+        ) : (
+          <RootStack.Screen name="Login" component={LoginScreen} />
+        )}
       </RootStack.Navigator>
     </NavigationContainer>
   );
@@ -135,17 +95,12 @@ export default function AppNavigator() {
 
 const styles = {
   createButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: '#16a34a',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 28,
-    elevation: 8,
-    shadowColor: '#16a34a',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
+    marginBottom: 12,
   },
 };
