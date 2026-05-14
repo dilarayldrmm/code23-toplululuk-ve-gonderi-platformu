@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
+ TextInput,
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +24,9 @@ export default function PostDetailScreen({ route, navigation }) {
 
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
+  const [likedComments, setLikedComments] = useState({});
+
+  const inputRef = useRef(null);
 
   const comments = commentCache[post.id] || [];
   const bookmarked = isBookmarked(post.id);
@@ -45,6 +48,21 @@ export default function PostDetailScreen({ route, navigation }) {
       setError(result.message || 'Yorum eklenemedi');
     }
   };
+
+  const toggleCommentLike = commentId => {
+    setLikedComments(prev => ({
+      ...prev,
+      [commentId]: !prev[commentId],
+    }));
+  };
+
+  const handleReply = username => {
+  setComment(`@${username} `);
+
+  setTimeout(() => {
+    inputRef.current?.focus();
+  }, 100);
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -162,7 +180,9 @@ export default function PostDetailScreen({ route, navigation }) {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.commentName}>{username}</Text>
                   <Text style={styles.commentTime}>
-                    {item.isOptimistic ? 'Şimdi gönderiliyor...' : 'Yeni yorum'}
+                    {item.isOptimistic
+                      ? 'Şimdi gönderiliyor...'
+                      : 'Yeni yorum'}
                   </Text>
                 </View>
 
@@ -176,14 +196,35 @@ export default function PostDetailScreen({ route, navigation }) {
               <Text style={styles.commentText}>{item.body}</Text>
 
               <View style={styles.commentActions}>
-                <View style={styles.actionBtn}>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => toggleCommentLike(item.id)}
+                >
                   <Ionicons
-                    name="thumbs-up-outline"
+                    name={
+                      likedComments[item.id]
+                        ? 'thumbs-up'
+                        : 'thumbs-up-outline'
+                    }
                     size={20}
-                    color="#16a34a"
+                    color={
+                      likedComments[item.id]
+                        ? '#16a34a'
+                        : '#6b7280'
+                    }
                   />
-                  <Text style={styles.actionText}>1</Text>
-                </View>
+
+                  <Text
+                    style={[
+                      styles.actionText,
+                      likedComments[item.id] && {
+                        color: '#16a34a',
+                      },
+                    ]}
+                  >
+                    {likedComments[item.id] ? 2 : 1}
+                  </Text>
+                </TouchableOpacity>
 
                 <Text style={styles.replyText}>Yanıtla</Text>
               </View>
@@ -205,7 +246,10 @@ export default function PostDetailScreen({ route, navigation }) {
           onChangeText={setComment}
         />
 
-        <TouchableOpacity style={styles.sendButton} onPress={handleSendComment}>
+        <TouchableOpacity
+          style={styles.sendButton}
+          onPress={handleSendComment}
+        >
           <Ionicons name="send" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -371,18 +415,30 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
 
-  commentActions: { flexDirection: 'row', alignItems: 'center', marginTop: 18 },
+  commentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 18,
+  },
 
-  actionBtn: { flexDirection: 'row', alignItems: 'center', marginRight: 24 },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 24,
+  },
 
   actionText: {
     marginLeft: 6,
-    color: '#16a34a',
+    color: '#6b7280',
     fontWeight: 'bold',
     fontSize: 16,
   },
 
-  replyText: { color: '#6b7280', fontSize: 16, fontWeight: '600' },
+  replyText: {
+    color: '#6b7280',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 
   inputContainer: {
     position: 'absolute',
